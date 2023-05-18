@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -12,14 +14,16 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 )
 
 var (
-	optPort     = strings.TrimSpace(os.Getenv("PORT"))
-	optTarget   = strings.TrimSpace(os.Getenv("PROXY_TARGET"))
-	optRealm    = strings.TrimSpace(os.Getenv("BASICAUTH_REALM"))
-	optUsername = strings.TrimSpace(os.Getenv("BASICAUTH_USERNAME"))
-	optPassword = strings.TrimSpace(os.Getenv("BASICAUTH_PASSWORD"))
+	optPort              = strings.TrimSpace(os.Getenv("PORT"))
+	optTargetInsecure, _ = strconv.ParseBool(strings.TrimSpace(os.Getenv("PROXY_TARGET_INSECURE")))
+	optTarget            = strings.TrimSpace(os.Getenv("PROXY_TARGET"))
+	optRealm             = strings.TrimSpace(os.Getenv("BASICAUTH_REALM"))
+	optUsername          = strings.TrimSpace(os.Getenv("BASICAUTH_USERNAME"))
+	optPassword          = strings.TrimSpace(os.Getenv("BASICAUTH_PASSWORD"))
 )
 
 func main() {
@@ -59,6 +63,26 @@ func main() {
 	}
 
 	rp := httputil.NewSingleHostReverseProxy(target)
+
+	if optTargetInsecure {
+		// 就是为了这点醋，我才包的这顿饺子
+		dialer := &net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}
+		rp.Transport = &http.Transport{
+			Proxy:                 http.ProxyFromEnvironment,
+			DialContext:           dialer.DialContext,
+			ForceAttemptHTTP2:     true,
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+	}
 
 	s := http.Server{
 		Addr: "0.0.0.0:80",
