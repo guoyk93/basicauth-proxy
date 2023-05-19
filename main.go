@@ -19,12 +19,12 @@ var (
 	opsLabels = []string{"request_method", "request_path", "authenticated"}
 
 	opsRequestsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "ezauth_http_requests_total",
+		Name: "basicauth_proxy_http_requests_total",
 		Help: "The total number of handled http request",
 	}, opsLabels)
 
 	opsRequestsDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Name: "ezauth_http_requests_duration",
+		Name: "basicauth_proxy_http_requests_duration",
 		Help: "The duration of handled http request",
 	}, opsLabels)
 )
