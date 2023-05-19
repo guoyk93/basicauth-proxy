@@ -11,6 +11,10 @@ HTTP proxy with basicauth
 * `BASICAUTH_PASSWORD`, password
 * `BASICAUTH_REALM`, default to `BasicAuth Proxy`, realm name of HTTP basic auth
 
+# Donation
+
+View https://guoyk.xyz
+
 # Credits
 
 Guo Y.K., MIT License
