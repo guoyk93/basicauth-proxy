@@ -2,28 +2,31 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"log"
-	"net"
 	"net/http"
-	"net/http/httputil"
-	"net/url"
 	"os"
 	"os/signal"
 	"strconv"
 	"strings"
 	"syscall"
-	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 var (
-	optPort              = strings.TrimSpace(os.Getenv("PORT"))
-	optTargetInsecure, _ = strconv.ParseBool(strings.TrimSpace(os.Getenv("PROXY_TARGET_INSECURE")))
-	optTarget            = strings.TrimSpace(os.Getenv("PROXY_TARGET"))
-	optRealm             = strings.TrimSpace(os.Getenv("BASICAUTH_REALM"))
-	optUsername          = strings.TrimSpace(os.Getenv("BASICAUTH_USERNAME"))
-	optPassword          = strings.TrimSpace(os.Getenv("BASICAUTH_PASSWORD"))
+	opsLabels = []string{"request_method", "request_path", "authenticated"}
+
+	opsRequestsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "ezauth_http_requests_total",
+		Help: "The total number of handled http request",
+	}, opsLabels)
+
+	opsRequestsDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "ezauth_http_requests_duration",
+		Help: "The duration of handled http request",
+	}, opsLabels)
 )
 
 func main() {
@@ -34,6 +37,16 @@ func main() {
 			os.Exit(1)
 		}
 	}(&err)
+
+	var (
+		optPort     = strings.TrimSpace(os.Getenv("PORT"))
+		optTarget   = strings.TrimSpace(os.Getenv("PROXY_TARGET"))
+		optRealm    = strings.TrimSpace(os.Getenv("BASICAUTH_REALM"))
+		optUsername = strings.TrimSpace(os.Getenv("BASICAUTH_USERNAME"))
+		optPassword = strings.TrimSpace(os.Getenv("BASICAUTH_PASSWORD"))
+
+		optTargetInsecure, _ = strconv.ParseBool(strings.TrimSpace(os.Getenv("PROXY_TARGET_INSECURE")))
+	)
 
 	if optPort == "" {
 		optPort = "80"
@@ -57,50 +70,18 @@ func main() {
 		return
 	}
 
-	var target *url.URL
-	if target, err = url.Parse(optTarget); err != nil {
+	var s *http.Server
+	if s, err = newServer(serverOptions{
+		port:     optPort,
+		target:   optTarget,
+		realm:    optRealm,
+		username: optUsername,
+		password: optPassword,
+
+		targetInsecure: optTargetInsecure,
+	}); err != nil {
 		return
 	}
-
-	rp := httputil.NewSingleHostReverseProxy(target)
-
-	if optTargetInsecure {
-		// 就是为了这点醋，我才包的这顿饺子
-		dialer := &net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}
-		rp.Transport = &http.Transport{
-			Proxy:                 http.ProxyFromEnvironment,
-			DialContext:           dialer.DialContext,
-			ForceAttemptHTTP2:     true,
-			MaxIdleConns:          100,
-			IdleConnTimeout:       90 * time.Second,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		}
-	}
-
-	s := http.Server{
-		Addr: "0.0.0.0:" + optPort,
-		Handler: http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-			username, password, ok := req.BasicAuth()
-			log.Println("Auth", username, password, ok)
-			log.Println("Required", optUsername, optPassword)
-			if !ok || username != optUsername || password != optPassword {
-				rw.Header().Set("WWW-Authenticate", "Basic realm="+strconv.Quote(optRealm))
-				http.Error(rw, "Unauthorized", http.StatusUnauthorized)
-				return
-			}
-			req.Header.Del("Authorization")
-			log.Println("Passed")
-			rp.ServeHTTP(rw, req)
-		}),
-	}
-	defer s.Shutdown(context.Background())
 
 	chErr := make(chan error, 1)
 	chSig := make(chan os.Signal, 1)
@@ -112,7 +93,10 @@ func main() {
 
 	select {
 	case err = <-chErr:
+		return
 	case sig := <-chSig:
 		log.Println("signal caught:", sig.String())
 	}
+
+	err = s.Shutdown(context.Background())
 }

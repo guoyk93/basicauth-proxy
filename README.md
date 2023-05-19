@@ -2,6 +2,19 @@
 
 HTTP proxy with basicauth
 
+# Images
+
+```
+guoyk/basicauth-proxy
+```
+
+# Metrics and Readiness
+
+```
+GET /metrics
+GET /ready
+```
+
 # Environment Variables
 
 * `PORT`, default to `80` listening port

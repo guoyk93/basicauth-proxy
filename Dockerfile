@@ -3,7 +3,7 @@ ENV GOPROXY https://goproxy.io
 ENV CGO_ENABLED 0
 WORKDIR /go/src/app
 ADD . .
-RUN go build -mod vendor -o /basicauth-proxy
+RUN go build -o /basicauth-proxy
 
 FROM alpine:3.18
 RUN apk add --no-cache ca-certificates
