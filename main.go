@@ -85,7 +85,7 @@ func main() {
 	}
 
 	s := http.Server{
-		Addr: "0.0.0.0:80",
+		Addr: "0.0.0.0:" + optPort,
 		Handler: http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			username, password, ok := req.BasicAuth()
 			log.Println("Auth", username, password, ok)
