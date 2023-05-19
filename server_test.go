@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestServer(t *testing.T) {
@@ -45,7 +46,7 @@ func TestServer(t *testing.T) {
 		code = res.StatusCode
 		headers = res.Header
 		var buf []byte
-		if buf, err = ioutil.ReadAll(res.Body); err != nil {
+		if buf, err = io.ReadAll(res.Body); err != nil {
 			return
 		}
 		body = string(buf)
@@ -62,22 +63,22 @@ func TestServer(t *testing.T) {
 
 	time.Sleep(time.Second)
 
-	code, headers, body, err := fetch("/metrics", false)
+	code, _, _, err := fetch("/metrics", false)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, code)
 
-	code, headers, body, err = fetch("/ready", false)
+	code, _, body, err := fetch("/ready", false)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, code)
 	assert.Equal(t, "OK\n", body)
 
-	code, headers, body, err = fetch("/test", false)
+	code, headers, body, err := fetch("/test", false)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusUnauthorized, code)
 	assert.Equal(t, `Basic realm="rko"`, headers.Get("WWW-Authenticate"))
 	assert.Equal(t, "Unauthorized\n", body)
 
-	code, headers, body, err = fetch("/test", true)
+	code, _, body, err = fetch("/test", true)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, code)
 	assert.Equal(t, "/test", body)
