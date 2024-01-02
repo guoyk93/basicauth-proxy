@@ -5,8 +5,8 @@
 # 容器镜像
 
 ```
-guoyk/basicauth-proxy
-ghcr.io/guoyk93/basicauth-proxy
+yankeguo/basicauth-proxy
+ghcr.io/yankeguo/basicauth-proxy
 ```
 
 # 遥测指标和健康检查
@@ -24,10 +24,6 @@ GET /ready
 - `BASICAUTH_USERNAME`, 设置认证用户名
 - `BASICAUTH_PASSWORD`, 设置认证密码
 - `BASICAUTH_REALM`, 默认为 `BasicAuth Proxy`, HTTP 认证的 Realm 名称
-
-# 捐赠
-
-查看 https://guoyk.net/donation
 
 # 许可证
 

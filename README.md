@@ -5,8 +5,8 @@ HTTP proxy with basicauth
 # Images
 
 ```
-guoyk/basicauth-proxy
-ghcr.io/guoyk93/basicauth-proxy
+yankeguo/basicauth-proxy
+ghcr.io/yankeguo/basicauth-proxy
 ```
 
 # Metrics and Readiness
@@ -24,10 +24,6 @@ GET /ready
 - `BASICAUTH_USERNAME`, username
 - `BASICAUTH_PASSWORD`, password
 - `BASICAUTH_REALM`, default to `BasicAuth Proxy`, realm name of HTTP basic auth
-
-# Donation
-
-View https://guoyk.xyz/donation
 
 # Credits
 
